@@ -3,7 +3,7 @@
 namespace neurodraw {
 
 
-Rectangle::Rectangle(float width, float height, Color color, bool is_filled)  {
+Rectangle::Rectangle(float width, float height, bool is_filled, Color color)  {
 	this->color_ 	 = color;
 	this->is_filled_ = is_filled;
 
@@ -12,7 +12,7 @@ Rectangle::Rectangle(float width, float height, Color color, bool is_filled)  {
 			   								 width, height, this->is_filled_,
 											 dtk_white);
 
-	//this->set_color(color, 1.0f);
+	this->set_color(color, 1.0f);
 
 }
 

@@ -9,7 +9,7 @@ namespace neurodraw {
 class Rectangle : public Shape {
 
 	public:
-		Rectangle(float width, float height, Color color = Palette::white, bool is_filled = false);
+		Rectangle(float width, float height, bool is_filled = false, Color color = Palette::white);
 		virtual ~Rectangle(void);
 
 };

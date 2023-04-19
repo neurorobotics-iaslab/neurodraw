@@ -5,9 +5,32 @@
 #include "neurodraw/neurodraw.h"
 
 neurodraw::Display display;
-neurodraw::Rectangle rect(0.5, 0.1);
+neurodraw::Rectangle rect(0.5, 0.1, true, neurodraw::Palette::magenta);
 int user_quit = 0;
 bool visibility = true;
+bool altcolor = true;
+
+void set_alternate_color(void) {
+
+	if (altcolor == true) {
+		rect.set_color(neurodraw::Palette::green);
+		altcolor = false;
+	} else {
+		rect.set_color(neurodraw::Palette::tan);
+		altcolor = true;
+	}
+
+}
+
+void set_visibility(void) {
+	if(visibility == true) {
+		rect.show();
+		visibility = false;
+	} else {
+		rect.hide();
+		visibility = true;
+	}
+}
 
 void callback_quit(void) {
 	user_quit = 1;
@@ -55,15 +78,16 @@ void callback_mousebutton(neurodraw::EventMouse mouse) {
 	if(mouse.state == 1)
 		return;
 
-	if(visibility == true) {
-		rect.show();
-		visibility = false;
-	} else {
-		rect.hide();
-		visibility = true;
+	if(mouse.button == 1) {
+		set_visibility();
+	} else if(mouse.button == 3) {
+		set_alternate_color();
 	}
 
+
 }
+
+
 
 int main(int argc, char** argv) {
 

@@ -1,26 +1,68 @@
 #include "neurodraw/Shape.h"
 
+
 namespace neurodraw {
 
 Shape::Shape(void) {
-
-	this->lock();	
-	this->color_     = Palette::white;
-	this->is_filled_ = false;
-	this->shape_     = nullptr;
-	this->x_ 		 = 0.0f;
-	this->y_    	 = 0.0f;
-	this->z_  	     = 0.0f;
-	this->unlock();
+	this->x_        = 0.0f;
+	this->y_        = 0.0f;
+	this->rot_      = 0.0f;
+	this->primtype_ = GL_LINE_LOOP;
 }
 
-Shape::~Shape(void) {
+Shape::~Shape(void) {}
+
+void Shape::add_point(float x, float y) {
 	this->lock();
-	if(this->shape_ != nullptr)
-		dtk_destroy_shape(this->shape_);
+	this->points_.push_back(x);
+	this->points_.push_back(y);
+	this->colors_.insert(this->colors_.end(), 4, 1.0f);
 	this->unlock();
-	
 }
+
+void Shape::add_index(unsigned int index) {
+	this->lock();
+	this->indices_.push_back(index);
+	this->unlock();
+}
+
+unsigned int Shape::num_points(void) {
+	unsigned int npoints;
+	this->lock();
+	npoints = this->points_.size()/2.0f;
+	this->unlock();
+	return npoints;
+}
+
+std::vector<float> Shape::points(void) {
+
+	std::vector<float> points;
+	this->lock();
+	points = this->points_;
+	this->unlock();
+
+	return points;
+}
+
+std::vector<unsigned int> Shape::indices(void) {
+
+	std::vector<unsigned int> indices;
+	this->lock();
+	indices = this->indices_;
+	this->unlock();
+	return indices;
+}
+
+std::vector<float> Shape::colors(void) {
+
+	std::vector<float> colors;
+	this->lock();
+	colors = this->colors_;
+	this->unlock();
+
+	return colors;
+}
+
 
 void Shape::lock(void) {
 	this->mutex_.lock();
@@ -32,41 +74,68 @@ void Shape::unlock(void) {
 
 void Shape::move(float x, float y) {
 	this->lock();
-	if(this->shape_ != nullptr) {
-		dtk_move_shape(this->shape_, x, y);
-		this->x_ = x;
-		this->y_ = y;
-	}
+	this->x_ = x;
+	this->y_ = y;
 	this->unlock();
-}	
+}
 
-void Shape::rmove(float dx, float dy) {
+void Shape::relmove(float dx, float dy) {
 	this->lock();
-	if(this->shape_ != nullptr) {
-		dtk_relmove_shape(this->shape_, dx, dy);
-		this->x_ = this->x_ + dx;
-		this->y_ = this->y_ + dy;
-	}
+	this->x_ += dx;
+	this->y_ += dy;
 	this->unlock();
 }
 
 void Shape::rotate(float deg) {
 	this->lock();
-	if(this->shape_ != nullptr) {
-		dtk_rotate_shape(this->shape_, deg);
-		this->z_ = deg;
+	this->rot_ = deg;
+	this->unlock();
+}
+
+void Shape::relrotate(float ddeg) {
+	this->lock();
+	this->rot_ += ddeg;
+	this->unlock();
+}
+
+void Shape::set_color(Color color) {
+
+	this->lock();
+
+	for(auto i = 0; i<this->colors_.size(); i+=4) {
+		this->colors_.at(i)   = color.at(0)/255.0f;
+		this->colors_.at(i+1) = color.at(1)/255.0f;
+		this->colors_.at(i+2) = color.at(2)/255.0f;
+	}
+
+	this->unlock();
+}
+
+void Shape::set_color(Color color, unsigned int index) {
+
+	unsigned int slot = 4 * index;
+
+	this->lock();
+	this->colors_.at(slot)   = color.at(0)/255.0f;
+	this->colors_.at(slot+1) = color.at(1)/255.0f;
+	this->colors_.at(slot+2) = color.at(2)/255.0f;
+	this->unlock();
+}
+
+void Shape::set_alpha(float alpha) {
+	this->lock();
+	for(auto i = 3; i<this->colors_.size(); i+=4) {
+		this->colors_.at(i)   = alpha;
 	}
 	this->unlock();
 }
 
-void Shape::rrotate(float ddeg) {
+void Shape::set_alpha(float alpha, unsigned int index) {
 	this->lock();
-	if(this->shape_ != nullptr) {
-		dtk_relrotate_shape(this->shape_, ddeg);
-		this->z_ = this->z_ + ddeg;
-	}
+	this->colors_.at(4 * index + 3) = alpha;
 	this->unlock();
 }
+
 
 void Shape::hide(void) {
 	this->set_alpha(0.0f);
@@ -76,79 +145,34 @@ void Shape::show(void) {
 	this->set_alpha(1.0f);
 }
 
-void Shape::fill(void) {
+void Shape::set_primitive_type(GLenum type) {
 	this->lock();
-	this->is_filled_ = true;
+	this->primtype_ = type;
 	this->unlock();
 }
 
-void Shape::unfill(void) {
-	this->lock();
-	this->is_filled_ = false;
-	this->unlock();
-}
-
-void Shape::set_alpha(float alpha) {
-	std::array<float, 4> color; 
+void Shape::draw(void) {
 
 	this->lock();
-	if(this->shape_ != nullptr) {
-		color = this->dtk_color_array(this->color_, alpha);
-		dtk_setcolor_shape(this->shape_, color.data(), DTK_IGNRGB);
-	}
-	this->unlock();
-}
 
-void Shape::set_color(Color color, float alpha) {
+	glPushMatrix();
 
-	this->lock();
-	if(this->shape_ != nullptr) {
-		this->color_ = color;
-		dtk_setcolor_shape(this->shape_, this->dtk_color_array(color, alpha).data(), 0);
-	}
-	this->unlock();
-}
+	// Translate to the reference point
+	glTranslatef(this->x_, this->y_, 0.0f);
+	glRotatef(this->rot_, 0.0f, 0.0f, 1.0f); 
 
-Color Shape::get_color(void) {
-	std::array<float, 3> color;
-	
-	this->lock();
-	for(auto i = 0; i<3; i++)
-		color.at(i) = this->color_.at(i);
+	glVertexPointer(2, GL_FLOAT, 0, this->points_.data());
+	glColorPointer(4, GL_FLOAT, 0, this->colors_.data());
+
+	// Draw shapes
+	glDrawElements(this->primtype_, this->indices_.size(), 
+	               GL_UNSIGNED_INT, this->indices_.data());
+
+	// Reset drawing  position
+	glPopMatrix(); 
 	this->unlock();
 
-	return color;
-
 }
 
-float Shape::get_alpha(void) {
-	float alpha;
-	
-	this->lock();
-	alpha = this->color_.at(3);
-	this->unlock();
-
-	return alpha;
 
 }
-
-void Shape::render(void) {
-	this->lock();
-	if(this->shape_ != nullptr)
-		dtk_draw_shape(this->shape_);
-	this->unlock();
-}
-
-std::array<float, 4> Shape::dtk_color_array(Color color, float alpha) {
-
-	std::array<float, 4> array;
-	array.at(0) = static_cast<float>(color.at(0))/255.0f;
-	array.at(1) = static_cast<float>(color.at(1))/255.0f;
-	array.at(2) = static_cast<float>(color.at(2))/255.0f;
-	array.at(3) = alpha;
-
-	return array;
-}
-
-}
-

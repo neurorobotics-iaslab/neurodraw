@@ -4,7 +4,7 @@
 #include <thread>
 #include <chrono>
 #include <cmath>
-#include "neurodraw/Timer.h"
+#include "neurochrono/Timer.h"
 
 namespace neurochrono {
 

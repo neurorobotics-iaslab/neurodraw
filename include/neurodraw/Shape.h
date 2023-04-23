@@ -1,64 +1,66 @@
 #ifndef NEURODRAW_SHAPE_H_
 #define NEURODRAW_SHAPE_H_
 
-#include <string.h>
+#include <vector>
+#include <array>
 #include <mutex>
-#include <drawtk.h>
-#include <dtk_colors.h>
+#include <SDL/SDL_opengl.h>
 
 #include "neurodraw/Palette.h"
 
 namespace neurodraw {
 
-// Forward declaration for class Display
-class Display;
-
 class Shape {
-	
+
 	public:
-
-		friend class Display;
-
 		virtual ~Shape(void);
 		Shape(const Shape&) = delete;
 		Shape& operator=(const Shape&) = delete;
 
+		// Manipulation functions
 		void move(float x, float y);
-		void rmove(float dx, float dy);
+		void relmove(float dx, float dy);
 		void rotate(float deg);
-		void rrotate(float ddeg);
+		void relrotate(float ddeg);
 		void hide(void);
 		void show(void);
-		void fill(void);
-		void unfill(void);
-		
-		
-		void set_color(Color color, float alpha = 1.0f);
+
+		// Color functions
+		void set_color(Color color);
+		void set_color(Color color, unsigned int index);
 		void set_alpha(float alpha);
+		void set_alpha(float alpha, unsigned int index);
 
-		Color get_color(void);
-		float get_alpha(void);
-
-	protected:
-		Shape(void);
-
-	private:
-		std::array<float, 4> dtk_color_array(Color color, float alpha);
-		void render(void);
+		// Geometry functions
+		unsigned int num_points(void);
+		std::vector<float> points(void);
+		std::vector<unsigned int> indices(void);
+		std::vector<float> colors(void);
+		void set_primitive_type(GLenum type);
+		
+		void draw(void);
 		void lock(void);
 		void unlock(void);
 
 	protected:
-		dtk_hshape shape_;
-		Color color_;
-		bool is_filled_;
-		float x_;
-		float y_;
-		float z_;
+		Shape(void);
+		void add_point(float x, float y);
+		void add_index(unsigned int index);
 
 	private:
-		std::mutex mutex_;
+		std::vector<float> 		  points_;
+		std::vector<unsigned int> indices_;
 
+	private:
+		float x_;
+		float y_;
+		float rot_;
+		GLenum primtype_;
+		
+		std::vector<float> colors_;
+
+
+		std::mutex mutex_;
 };
 
 

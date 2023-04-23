@@ -3,21 +3,24 @@
 namespace neurodraw {
 
 
-Rectangle::Rectangle(float width, float height, bool is_filled, Color color)  {
-	this->color_ 	 = color;
-	this->is_filled_ = is_filled;
+Rectangle::Rectangle(float width, float hight, bool is_filled, Color color) {
 
+	this->add_point(-width/2.0f, -hight/2.0f);
+	this->add_point(-width/2.0f,  hight/2.0f);
+	this->add_point( width/2.0f,  hight/2.0f);
+	this->add_point( width/2.0f, -hight/2.0f);
 
-	this->shape_ = dtk_create_rectangle_hw(this->shape_, this->x_, this->y_, 
-			   								 width, height, this->is_filled_,
-											 dtk_white);
+	for(auto i = 0; i<4; i++)
+		this->add_index(i);
 
-	this->set_color(color, 1.0f);
+	if(is_filled)
+		this->set_primitive_type(GL_TRIANGLE_FAN);
+
+	this->set_color(color);
 
 }
 
 Rectangle::~Rectangle(void) {}
-
 
 
 }

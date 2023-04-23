@@ -2,79 +2,174 @@
 
 namespace neurodraw {
 
-Engine::Engine(void) {
-	this->mutex_.lock();
-	this->run_  = false;
-	this->name_ = "engine"; 
-	this->mutex_.unlock();
+
+Engine::Engine(const std::string& wtitle, float fps) : fps_(fps) {
+	this->name_ = "display";
+	this->window_ = new Window(wtitle);
+	this->set_fps_tolerance(NEURODRAW_FPS_TOLERANCE);
+
+	this->start();
 }
+
 
 Engine::~Engine(void) {
+
 	printf("[%s] Destructor\n", this->name().c_str());
+	this->teardown();
+
+	while(this->window_->is_open());
+
+	// Destroy window
+	if(this->window_ != nullptr) 
+		delete this->window_;
 }
 
-void Engine::start(void) {
-
-	if(this->is_running() == true) {
-		this->stop();
-		this->join();
-	}
-
-	printf("[%s] Engine is requested to start\n", this->name().c_str());
-	this->thread_ = std::thread(&Engine::run, this);
-	this->mutex_.lock();
-	this->run_ = true;
-	this->mutex_.unlock();
+void Engine::run(void) {
 	
-}
+	neurochrono::Rate r(this->fps_);
+	float current_fps;
+	
+	printf("[%s] Engine is up\n", this->name().c_str());
 
-void Engine::stop(void) {
-	printf("[%s] Engine is requested to stop\n", this->name().c_str());
-	this->mutex_.lock();
-	this->run_ = false;
-	this->mutex_.unlock();
-}
+	// Open window
+	this->window_->open();
 
-void Engine::teardown(void) {
-	printf("[%s] Engine is requested to tearing down\n", this->name().c_str());
-	if(this->is_running() == true) {
-		this->stop();
+	// Register default callback
+	this->window_->on_quit(&Engine::callback_quit, this);
+	this->window_->on_redraw(&Engine::callback_redraw, this);
+
+	// Start main loop
+	while(this->is_running()) {
+
+		// Clear window
+		this->window_->clear();
+
+		// Draw all shapes in the engine
+		this->update();
+
+		// Update window
+		this->window_->update();
+
+		// Process window events
+		this->window_->process_events();
+
+		r.sleep();
+
+		current_fps = this->real_fps();
+		if(current_fps < this->fps_minimum()) {
+			printf("[%s] Running late: %3.1f fps vs. %3.1f fps (nominal %3.1f fps)\n", 
+														   this->name().c_str(), 
+														   current_fps, this->fps_minimum(), 
+														   this->fps());
+		}
 	}
-	this->join();
-	printf("[%s] Engine has teared down\n", this->name().c_str());
+
+	printf("[%s] Engine is down\n", this->name().c_str());
+	
+	// Closing window 
+	this->window_->close();
 }
 
-bool Engine::is_running(void) {
-	bool ret = false;
-	this->mutex_.lock();
-	ret = this->run_;
-	this->mutex_.unlock();
-	return ret;
+void Engine::callback_quit(void) {
+	this->stop();
 }
 
-void Engine::join(void) {
-	printf("[%s] Engine is requested to join\n", this->name().c_str());
-	if(this->thread_.joinable() == true)
-		this->thread_.join();
+void Engine::callback_redraw(void) {
+	this->update();
 }
 
-void Engine::lock(void) {
-	this->mutex_.lock();
+void Engine::quit(void) {
+	this->stop();
 }
 
-void Engine::unlock(void) {
-	this->mutex_.unlock();
+void Engine::on_keyboard(std::function<void(const KeyboardEvent& kevt)> func) {
+	this->lock();
+	this->window_->on_keyboard(func);
+	this->unlock();
 }
 
-std::string Engine::name(void) {
-	std::string name;
-	this->mutex_.lock();
-	name = this->name_;
-	this->mutex_.unlock();
-	return name;
+void Engine::on_mouse(std::function<void(const MouseEvent& mevt)> func) {
+	this->lock();
+	this->window_->on_mouse(func);
+	this->unlock();
 }
 
+void Engine::set_fps_tolerance(float tolerance) {
+	this->lock();
+	this->fps_minimum_ = ( (100.0f - NEURODRAW_FPS_TOLERANCE) * this->fps_ ) / 100.0f;
+	this->unlock();
+	printf("[%s] Minimum fps set at: %3.1f fps (nominal %3.1f fps, tolerance %2.1f%%)\n", 
+																	this->name().c_str(), 
+																    this->fps_minimum(), 
+																	this->fps(),
+																	tolerance);
+}
 
+void Engine::winsize(unsigned int* width, unsigned int* height) {
+	this->window_->size(width, height);
+}
+
+float Engine::fps(void) {
+	float fps;
+	this->lock();
+	fps = this->fps_;
+	this->unlock();
+	return fps;
+}
+
+float Engine::fps_minimum(void) {
+	float fps_minimum_;
+	this->lock();
+	fps_minimum_ = this->fps_minimum_;
+	this->unlock();
+	return fps_minimum_;
+}
+
+void Engine::update(void) {
+
+	this->lock();
+	for(auto it=this->list_.begin(); it!=this->list_.end(); ++it)
+		(*it)->draw();
+	this->unlock();
+}
+
+float Engine::real_fps(void) {
+
+	static neurochrono::timer_msecs timer;
+	float real_fps;
+
+	this->lock();
+	real_fps = 1000.0f / timer.toc();
+	timer.tic();
+	this->unlock();
+
+	return real_fps;
+}
+
+bool Engine::add(Shape* shape) {
+
+	bool retcod;
+
+	this->lock();
+	auto p = this->list_.insert(shape);
+	retcod = p.second;
+	this->unlock();
+
+	return retcod;
+}
+
+bool Engine::clear(Shape* shape) {
+
+	bool retcod;
+	
+	this->lock();
+	size_t nelem = this->list_.erase(shape);
+	retcod = nelem > 0 ? true: false;
+	this->unlock();
+
+	return retcod;
+
+}
 
 
 }

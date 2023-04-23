@@ -1,10 +1,10 @@
-#ifndef NEURODRAW_RECTANGLE_
-#define NEURODRAW_RECTANGLE_
+#ifndef NEURODRAW_RECTANGLE_H_
+#define NEURODRAW_RECTANGLE_H_
 
-#include "neurodraw/Shape.h"
-
+#include "Shape.h"
 
 namespace neurodraw {
+
 
 class Rectangle : public Shape {
 
@@ -12,9 +12,10 @@ class Rectangle : public Shape {
 		Rectangle(float width, float height, bool is_filled = false, Color color = Palette::white);
 		virtual ~Rectangle(void);
 
+
 };
 
-
 }
+
 
 #endif

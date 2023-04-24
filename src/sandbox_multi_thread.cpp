@@ -20,7 +20,7 @@ neurodraw::Cross cross(0.2f, 0.05f);
 neurodraw::Arrow arrow(0.2f, 0.1f, true, neurodraw::Palette::darkviolet);
 neurodraw::Triangle tri(0.1f, 0.2f, false);
 neurodraw::Line line(0.0f, -0.05f, 0.0f, 0.05f, neurodraw::Palette::purple);
-neurodraw::Arc arc(0.3f, 0.1f, M_PI / 3.0f, neurodraw::Palette::gold);
+neurodraw::Arc arc(0.3f, 0.1f, M_PI / 2.0f, neurodraw::Palette::gold);
 neurodraw::RegularShape regular(0.2f, 12, true, neurodraw::Palette::grey);
 
 // Pointer to the engine (global to be used in the callbacks)

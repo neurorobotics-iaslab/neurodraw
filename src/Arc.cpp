@@ -31,8 +31,8 @@ void Arc::create_arc(float radius, float thick, float angle, float cx, float cy,
 	for (unsigned int i = 0; i<numvert; i++) {
 		cr = i % 2 ? r2 : r1;
 		this->add_index(i);
-		x = cr * std::cos(static_cast<float>(i) * angle / static_cast<float>(numpoints)) +cx;
-		y = cr * std::sin(static_cast<float>(i) * angle / static_cast<float>(numpoints)) +cy;
+		x = cr * std::cos(static_cast<float>(i) * angle * 0.5f / static_cast<float>(numpoints)) +cx;
+		y = cr * std::sin(static_cast<float>(i) * angle * 0.5f / static_cast<float>(numpoints)) +cy;
 		this->add_point(x, y);
 	}
 

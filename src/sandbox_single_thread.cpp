@@ -18,7 +18,7 @@ neurodraw::Ring ring(0.3f, 0.1f);
 neurodraw::Cross cross(0.2f, 0.05f);
 neurodraw::Arrow arrow(0.2f, 0.1f, true, neurodraw::Palette::darkviolet);
 neurodraw::Triangle tri(0.1f, 0.2f, false);
-neurodraw::Line line(-0.5f, -0.05f, -0.5f, 0.05f, neurodraw::Palette::purple);
+neurodraw::Line line(0.0f, -0.05f, 0.0f, 0.05f, neurodraw::Palette::purple);
 neurodraw::Arc arc(0.3f, 0.1f, M_PI / 3.0f, neurodraw::Palette::gold);
 neurodraw::RegularShape regular(0.2f, 12, true, neurodraw::Palette::grey);
 bool user_quit = false;
@@ -89,26 +89,17 @@ void callback_keyboard(const neurodraw::KeyboardEvent& event) {
 			 case neurodraw::EventKey::c:
 				 rect.set_alpha(1.0f);
 				 break;
+			 case neurodraw::EventKey::l:
+				 circle.relrotate(45.0f, 0.0f, 0.0f);
+				 break;
+			 case neurodraw::EventKey::i:
+				 line.relrotate(45.0f, 0.0f, 0.0f);
+				 break;
 		 }
 	}
 }
 
 int main(int argc, char** argv) {
-
-
-
-	auto points  = rect.points();
-	auto indices = rect.indices();
-	printf("Num points:   %ld\n", points.size());
-	printf("Num indices:  %ld\n", indices.size());
-	for(auto i = 0; i < points.size(); i+=2) {
-		printf("[%d] (%f, %f)\n", indices.at(i/2), points.at(i), points.at(i+1)); 
-	}
-	
-	auto cpoints  = circle.points();
-	auto cindices = circle.indices();
-	printf("Num circle points:   %ld\n", cpoints.size());
-	printf("Num circle indices:  %ld\n", cindices.size());
 
 
 	win.on_redraw(callback_redraw);
@@ -120,17 +111,15 @@ int main(int argc, char** argv) {
 
 	ring.move(0.5f, 0.5f);
 	ring.set_color(neurodraw::Palette::blue);
-
 	circle.move(-0.5f, -0.5f);
 	cross.set_color(neurodraw::Palette::red);
 	arrow.move(0.5f, -0.5f);
 	tri.set_color(neurodraw::Palette::yellow);
 	tri.move(-0.5f, 0.5f);
+	line.move(-0.5f, 0.0f);
 	arc.move(0.5f, -0.2f);
 	regular.move(0.0f, -0.5f);
 	
-	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
 	while(user_quit == false) {
 		redraw();
 		win.process_events();

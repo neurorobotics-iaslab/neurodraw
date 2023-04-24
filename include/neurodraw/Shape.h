@@ -4,6 +4,7 @@
 #include <vector>
 #include <array>
 #include <mutex>
+#include <cmath>
 #include <SDL/SDL_opengl.h>
 
 #include "neurodraw/Palette.h"
@@ -22,6 +23,8 @@ class Shape {
 		void relmove(float dx, float dy);
 		void rotate(float deg);
 		void relrotate(float ddeg);
+		void rotate(float deg, float refx, float refy, bool hold = false);
+		void relrotate(float ddeg, float refx, float refy, bool hold = false);
 		void hide(void);
 		void show(void);
 

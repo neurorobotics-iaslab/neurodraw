@@ -98,6 +98,40 @@ void Shape::relrotate(float ddeg) {
 	this->unlock();
 }
 
+void Shape::rotate(float deg, float refx, float refy, bool hold) {
+
+	float cx, cy, crot, radius, rdeg;
+	this->lock();
+	cx = this->x_;
+	cy = this->y_;
+	crot = std::atan2(cy - refy, cx - refx) * 180.0f / M_PI;
+	radius = std::sqrt( std::pow( (refx - cx) , 2 ) + std::pow( (refy - cy) , 2) );
+	rdeg = deg * M_PI / 180.0f ;
+	this->x_ = radius * std::cos( rdeg  ) + refx;
+	this->y_ = radius * std::sin( rdeg  ) + refy;
+	if(hold == false)
+		this->rot_ = this->rot_ + deg - crot;
+
+	this->unlock();
+}
+
+void Shape::relrotate(float ddeg, float refx, float refy, bool hold) {
+
+	float cx, cy, crot, radius, rdeg;
+	this->lock();
+	cx   = this->x_;
+	cy   = this->y_;
+	crot = std::atan2(cy - refy, cx - refx) * 180.0f / M_PI;
+	radius = std::sqrt( std::pow( (refx - cx) , 2 ) + std::pow( (refy - cy) , 2) );
+	rdeg = (ddeg + crot) * M_PI / 180.0f ;
+	this->x_ = radius * std::cos( rdeg  ) + refx;
+	this->y_ = radius * std::sin( rdeg  ) + refy;
+	if(hold == false)
+		this->rot_ += this->rot_ + ddeg - crot;
+
+	this->unlock();
+}
+
 void Shape::set_color(Color color) {
 
 	this->lock();

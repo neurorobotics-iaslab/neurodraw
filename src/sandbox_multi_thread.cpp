@@ -71,10 +71,10 @@ void callback_keyboard(const neurodraw::KeyboardEvent& event) {
 				 rect.set_alpha(1.0f);
 				 break;
 			 case neurodraw::EventKey::l:
-				 arc.relrotate(180.0f);
+				 circle.relrotate(45.0f, 0.0f, 0.0f);
 				 break;
 			 case neurodraw::EventKey::i:
-				 line.relrotate(90.0f);
+				 line.relrotate(45.0f, 0.0f, 0.0f);
 				 break;
 		 }
 	}

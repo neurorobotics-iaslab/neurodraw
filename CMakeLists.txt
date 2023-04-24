@@ -32,6 +32,9 @@ add_library(${PROJECT_NAME} SHARED
 			src/Window.cpp
 			src/Rate.cpp
 			)
+target_link_libraries(${PROJECT_NAME} 
+					  ${SDL_LIBRARY} 
+					  ${OPENGL_LIBRARIES})
 
 
 add_library(neurochrono SHARED

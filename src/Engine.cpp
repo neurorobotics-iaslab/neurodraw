@@ -148,27 +148,39 @@ float Engine::real_fps(void) {
 
 bool Engine::add(Shape* shape) {
 
-	bool retcod;
+	bool retcod = true;
 
 	this->lock();
-	auto p = this->list_.insert(shape);
-	retcod = p.second;
+	this->list_.push_back(shape);
 	this->unlock();
 
 	return retcod;
 }
 
-bool Engine::clear(Shape* shape) {
+bool Engine::erase(unsigned int pos) {
 
-	bool retcod;
-	
+	int lsize;
 	this->lock();
-	size_t nelem = this->list_.erase(shape);
-	retcod = nelem > 0 ? true: false;
+	lsize = this->list_.size();
 	this->unlock();
 
-	return retcod;
+	if(pos > lsize - 1 || pos < 0)
+		return false;
 
+	this->lock();
+	auto it = this->list_.begin();
+	std::advance(it, pos);
+	this->list_.erase(it);
+	this->unlock();
+
+	return true;
+
+}
+
+void Engine::clear(void) {
+	this->lock();
+	this->list_.clear();
+	this->unlock();
 }
 
 

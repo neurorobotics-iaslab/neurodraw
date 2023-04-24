@@ -2,7 +2,7 @@
 #define NEURODRAW_ENGINE_H_
 
 #include <string>
-#include <unordered_set>
+#include <list>
 #include <chrono>
 #include <functional>
 
@@ -22,7 +22,8 @@ class Engine : public Thread {
 		~Engine(void);
 
 		bool add(Shape* shape);
-		bool clear(Shape* shape);
+		bool erase(unsigned int pos);
+		void clear(void);
 
 		void winsize(unsigned int* width, unsigned int* height);
 		float fps(void);
@@ -53,7 +54,7 @@ class Engine : public Thread {
 		Window* window_;
 
 	private:
-		std::unordered_set<Shape*> list_;
+		std::list<Shape*> list_;
 		float fps_;
 		float fps_minimum_;
 		

@@ -1,5 +1,5 @@
 # NeuroDraw
 
-C++ graphic library based on libdrawtk to create simple feedback for neuro applications.
+C++ graphic library based on SDL and OpenGL to create simple feedbacks for neuroapplications.
 
 **!!! Working in progress !!!**

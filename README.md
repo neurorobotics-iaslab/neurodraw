@@ -8,6 +8,7 @@ To date, the library depends on the old SDL 1.2 library. To install it:
 ```
 sudo apt-get install libsdl1.2-dev
 ```
+**TODO: move to SDL2.0**
 
 ## Installation
 The library can be installed using cmake. Clone the repository:
@@ -82,7 +83,7 @@ void on_keyboard(std::function<void(const KeyboardEvent& kevt)> func);
 void on_mouse(std::function<void(const MouseEvent& mevt)> func);
 
 ```
-
+### Class Shape and derived classes
 The library provides a base class ``Shape`` that can be instanciated only as derived class. The main class member functions provided are:
 ```cpp
 // Move the shape to the position (x, y)
@@ -127,10 +128,10 @@ void set_alpha(float alpha);
 void set_alpha(float alpha, unsigned int index);
 
 ```
+#### Color palettes
+Colors are defined as a ```static std::array<float, 4>``` with normalized RGBA values (from 0.0 to 1.0). In ```Palette.h``` a list of predefined color is provided.
 
-
-
-
+#### Derived shape classes
 The provided derived classes are:
 ```cpp 
 Line::Line(float x1, float y1, float x2, float y2, Color color = Palette::white);
@@ -142,6 +143,41 @@ RegularShape::RegularShape(float radius, unsigned int nvertices, bool is_filled 
 Circle::Circle(float radius, bool is_filled = false, Color color = Palette::white);
 Arc::Arc(float radius, float thick, float angle, Color color = Palette::white);
 Ring::Ring(float radius, float thick, Color color = Palette::white);
+```
+## Class Engine (multi-thread usage of the library)
+The class provides a simple graphic engine to continuously draw the shapes and to handle the user callbacks. The inner thread is implemented to run at a specific rate. **The Engine already creates the window.** The main class member functions provided are:
+
+```cpp
+// Instantiation of the Engine with a titled window and a given update rate
+Engine(const std::string& wtitle = "untitled", float fps = NEURODRAW_FPS);
+
+// Add a shape to the engine
+bool add(Shape* shape);
+
+// Remove a shape from the engine
+bool erase(unsigned int pos);
+
+// Remove all shapes from the engine
+void clear(void);
+
+// Get the current window size
+void winsize(unsigned int* width, unsigned int* height);
+
+// Get the ideal update rate
+float fps(void);
+
+// Get the actual update rate
+float real_fps(void);
+
+// Quit the engine
+void quit(void);
+
+// Register the callback for mouse event
+void on_keyboard(std::function<void(const KeyboardEvent& kevt)> func);
+		
+// Register the callback for keyboard event
+void on_mouse(std::function<void(const MouseEvent& mevt)> func);
+
 ```
 
 ## Example of usage
@@ -179,96 +215,96 @@ neurodraw::Engine* engineptr;
 
 void callback_mouse(const neurodraw::MouseEvent& event) {
 
-	unsigned int width, height;
-	float min_x, max_x;
+   unsigned int width, height;
+   float min_x, max_x;
 
-	engineptr->winsize(&width, &height);
+   engineptr->winsize(&width, &height);
 
-	float x = float(event.x)/height;
-	float y = float(event.y)/height;
+   float x = float(event.x)/height;
+   float y = float(event.y)/height;
 
-	max_x = float(width)/float(height);
+   max_x = float(width)/float(height);
 
-	float py = - (2.0f*y - 1.0f);
-	float px = 2.0f*x - max_x;
+   float py = - (2.0f*y - 1.0f);
+   float px = 2.0f*x - max_x;
 
-	rect.move(px, py);
+   rect.move(px, py);
 }
 
 void callback_keyboard(const neurodraw::KeyboardEvent& event) {
-	if(event.state == 1) {
-		printf("Key pressed: %d\n", event.sym);
-		 switch(event.sym) {
-			 case neurodraw::EventKey::ESCAPE:
-				 engineptr->quit();
-				 break;
-			 case neurodraw::EventKey::a:
-				 rect.set_color(neurodraw::Palette::tomato);
-				 break;
-			 case neurodraw::EventKey::s:
-				 rect.set_color(neurodraw::Palette::darkblue);
-				 break;
-			 case neurodraw::EventKey::d:
-				 rect.set_color(neurodraw::Palette::darkgreen);
-				 break;
-			 case neurodraw::EventKey::z:
-				 rect.set_alpha(0.0f);
-				 break;
-			 case neurodraw::EventKey::x:
-				 rect.set_alpha(0.5f);
-				 break;
-			 case neurodraw::EventKey::c:
-				 rect.set_alpha(1.0f);
-				 break;
-			 case neurodraw::EventKey::l:
-				 circle.relrotate(45.0f, 0.0f, 0.0f);
-				 break;
-			 case neurodraw::EventKey::i:
-				 line.relrotate(45.0f, 0.0f, 0.0f);
-				 break;
-		 }
+   if(event.state == 1) {
+	printf("Key pressed: %d\n", event.sym);
+	switch(event.sym) {
+	   case neurodraw::EventKey::ESCAPE:
+		engineptr->quit();
+		break;
+	   case neurodraw::EventKey::a:
+		rect.set_color(neurodraw::Palette::tomato);
+		break;
+	   case neurodraw::EventKey::s:
+		rect.set_color(neurodraw::Palette::darkblue);
+		break;
+	   case neurodraw::EventKey::d:
+		rect.set_color(neurodraw::Palette::darkgreen);
+		break;
+	   case neurodraw::EventKey::z:
+		rect.set_alpha(0.0f);
+		break;
+	   case neurodraw::EventKey::x:
+		rect.set_alpha(0.5f);
+		break;
+	   case neurodraw::EventKey::c:
+		rect.set_alpha(1.0f);
+		break;
+	   case neurodraw::EventKey::l:
+		circle.relrotate(45.0f, 0.0f, 0.0f);
+		break;
+	   case neurodraw::EventKey::i:
+		line.relrotate(45.0f, 0.0f, 0.0f);
+		break;
 	}
+   }
 }
 
 int main(int argc, char** argv) {
+   
+   // Instantiation of the engine
+   neurodraw::Engine engine("Multithread example");
+   engineptr = &engine;
 
-  // Instantiation of the engine
-	neurodraw::Engine engine("Multithread example");
-	engineptr = &engine;
+   // Setting the callbacks for keyboard and mouse event
+   engine.on_keyboard(callback_keyboard);
+   engine.on_mouse(callback_mouse);
 
-  // Setting the callbacks for keyboard and mouse event
-	engine.on_keyboard(callback_keyboard);
-	engine.on_mouse(callback_mouse);
-
-  // Adding the shapes to the engine
-	engine.add(&rect);
-	engine.add(&circle);
-	engine.add(&ring);
-	engine.add(&cross);
-	engine.add(&arrow);
-	engine.add(&tri);
-	engine.add(&line);
-	engine.add(&arc);
-	engine.add(&regular);
+   // Adding the shapes to the engine
+   engine.add(&rect);
+   engine.add(&circle);
+   engine.add(&ring);
+   engine.add(&cross);
+   engine.add(&arrow);
+   engine.add(&tri);
+   engine.add(&line);
+   engine.add(&arc);
+   engine.add(&regular);
 		
-  // Setup position of the shapes
-	ring.move(0.5f, 0.5f);
-	ring.set_color(neurodraw::Palette::blue);
-	circle.move(-0.5f, -0.5f);
-	cross.set_color(neurodraw::Palette::red);
-	arrow.move(0.5f, -0.5f);
-	tri.set_color(neurodraw::Palette::yellow);
-	tri.move(-0.5f, 0.5f);
-	line.move(-0.5f, 0.0f);
-	arc.move(0.5f, -0.2f);
-	regular.move(0.0f, -0.5f);
+   // Setup position of the shapes
+   ring.move(0.5f, 0.5f);
+   ring.set_color(neurodraw::Palette::blue);
+   circle.move(-0.5f, -0.5f);
+   cross.set_color(neurodraw::Palette::red);
+   arrow.move(0.5f, -0.5f);
+   tri.set_color(neurodraw::Palette::yellow);
+   tri.move(-0.5f, 0.5f);
+   line.move(-0.5f, 0.0f);
+   arc.move(0.5f, -0.2f);
+   regular.move(0.0f, -0.5f);
 	
-  // Main loop while the engine is running
-	while(engine.is_running()) {
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
-	}
+   // Main loop while the engine is running
+   while(engine.is_running()) {
+	std::this_thread::sleep_for(std::chrono::milliseconds(10));
+   }
 
-	return 0;
+   return 0;
 }
 ```
 

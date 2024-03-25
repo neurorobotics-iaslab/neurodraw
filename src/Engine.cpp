@@ -96,7 +96,7 @@ void Engine::on_mouse(std::function<void(const MouseEvent& mevt)> func) {
 
 void Engine::set_fps_tolerance(float tolerance) {
 	this->lock();
-	this->fps_minimum_ = ( (100.0f - NEURODRAW_FPS_TOLERANCE) * this->fps_ ) / 100.0f;
+	this->fps_minimum_ = ( (100.0f - tolerance) * this->fps_ ) / 100.0f;
 	this->unlock();
 	printf("[%s] Minimum fps set at: %3.1f fps (nominal %3.1f fps, tolerance %2.1f%%)\n", 
 																	this->name().c_str(), 

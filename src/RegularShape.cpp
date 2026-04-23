@@ -17,29 +17,37 @@ void RegularShape::create_regular_shape(float radius, float cx, float cy, Color 
 	unsigned int i, j;
 	float x, y;
 	unsigned int numvert = is_filled ? numpoints+1 : numpoints;
-	unsigned int numind = is_filled ? numpoints+2 : numpoints;
-	GLenum primtype = is_filled ? GL_TRIANGLE_FAN : GL_LINE_LOOP;
 	
-	this->set_primitive_type(primtype);
+	if(is_filled) {
+		this->set_fill_primitive_type(GL_TRIANGLE_FAN);
+		this->set_stroke_primitive_type(GL_LINE_LOOP);
+	} else {
+		this->set_primitive_type(GL_LINE_LOOP);
+	}
 
 	i = j = 0;
 	if(is_filled) {
 		this->add_point(cx, cy);
-		this->add_index(0);
+		this->add_fill_index(0);
 		i++;
 	}
 
 	while(i < numvert) {
-		this->add_index(i);
 		x = radius * std::cos(static_cast<float>(j)*2.0f *M_PI / static_cast<float>(numpoints)) + cx;
 		y = radius * std::sin(static_cast<float>(j)*2.0f *M_PI / static_cast<float>(numpoints)) + cy;
 		this->add_point(x, y);
+		if(is_filled) {
+			this->add_fill_index(i);
+			this->add_stroke_index(i);
+		} else {
+			this->add_index(i);
+		}
 		i++;
 		j++;
 	}
 
 	if(is_filled)
-		this->add_index(1);
+		this->add_fill_index(1);
 }
 
 

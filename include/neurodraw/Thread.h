@@ -3,6 +3,7 @@
 
 #include <chrono>
 #include <mutex>
+#include <string>
 #include <thread>
 
 namespace neurodraw {

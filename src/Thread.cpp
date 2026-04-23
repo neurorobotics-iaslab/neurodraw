@@ -1,5 +1,7 @@
 #include "neurodraw/Thread.h"
 
+#include <cstdio>
+
 namespace neurodraw {
 
 Thread::Thread(void) : run_(false), name_("engine") {}
@@ -14,10 +16,10 @@ void Thread::start(void) {
 	}
 
 	printf("[%s] Thread is requested to start\n", this->name().c_str());
-	this->thread_ = std::thread(&Thread::run, this);
 	this->mutex_.lock();
 	this->run_ = true;
 	this->mutex_.unlock();
+	this->thread_ = std::thread(&Thread::run, this);
 	
 }
 

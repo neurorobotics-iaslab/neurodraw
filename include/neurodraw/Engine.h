@@ -5,10 +5,12 @@
 #include <list>
 #include <chrono>
 #include <functional>
+#include <memory>
 
 #include "neurodraw/common.h"
 #include "neurodraw/Thread.h"
 #include "neurodraw/Shape.h"
+#include "neurodraw/Tween.h"
 #include "neurodraw/Window.h"
 #include "neurochrono/Timer.h"
 #include "neurochrono/Rate.h"
@@ -24,6 +26,8 @@ class Engine : public Thread {
 		bool add(Shape* shape);
 		bool erase(unsigned int pos);
 		void clear(void);
+		Shape* hit(float x, float y);
+		void mouse_to_world(int pixel_x, int pixel_y, float* x, float* y);
 
 		void winsize(unsigned int* width, unsigned int* height);
 		float fps(void);
@@ -32,6 +36,9 @@ class Engine : public Thread {
 		float fps_minimum(void);
 
 		void quit(void);
+		void add_tween(const Tween& tween);
+		void clear_tweens(void);
+		std::size_t tween_count(void);
 
 		void on_keyboard(std::function<void(const KeyboardEvent& kevt)> func);
 		void on_mouse(std::function<void(const MouseEvent& mevt)> func);
@@ -51,10 +58,11 @@ class Engine : public Thread {
 
 
 	private:
-		Window* window_;
+		std::unique_ptr<Window> window_;
 
 	private:
 		std::list<Shape*> list_;
+		Animator animator_;
 		float fps_;
 		float fps_minimum_;
 		

@@ -1,40 +1,56 @@
 #ifndef NEURODRAW_WINDOW_H_
 #define NEURODRAW_WINDOW_H_
 
-#include <string>
 #include <array>
-#include <mutex>
 #include <functional>
-#include <SDL/SDL.h>
-#include <SDL/SDL_opengl.h>
+#include <mutex>
+#include <string>
+
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_opengl.h>
 
 #include "neurodraw/Palette.h"
 
 namespace neurodraw {
 
 struct MouseEvent {
-	MouseEvent(void) {};
-	MouseEvent(const SDL_Event& evt) {
-		button = evt.button.button;
-		state  = evt.button.state;
-		x = evt.button.x;
-		y = evt.button.y;
-	};
+	MouseEvent(void) : button(0), state(0), x(0), y(0) {}
+
+	MouseEvent(const SDL_Event& evt) : button(0), state(0), x(0), y(0) {
+		switch(evt.type) {
+			case SDL_MOUSEBUTTONDOWN:
+			case SDL_MOUSEBUTTONUP:
+				button = evt.button.button;
+				state = evt.button.state;
+				x = evt.button.x;
+				y = evt.button.y;
+				break;
+
+			case SDL_MOUSEMOTION:
+				state = 0;
+				x = evt.motion.x;
+				y = evt.motion.y;
+				break;
+		}
+	}
+
 	unsigned int button;
 	unsigned int state;
-	unsigned int x;
-	unsigned int y;
+	int x;
+	int y;
 };
 
 struct KeyboardEvent {
-	KeyboardEvent(void) {};
+	KeyboardEvent(void) : state(0), sym(0), mod(0) {}
+
 	KeyboardEvent(const SDL_Event& evt) {
-		state = (evt.key.state==SDL_PRESSED) ? 1 : 0;
-		sym  = evt.key.keysym.sym;
+		state = (evt.key.state == SDL_PRESSED) ? 1 : 0;
+		sym = evt.key.keysym.sym;
 		mod = evt.key.keysym.mod;
-	};
+	}
+
 	unsigned int state;
-	unsigned int sym;
+	int sym;
 	unsigned int mod;
 };
 
@@ -50,12 +66,11 @@ class Window {
 		void update(void);
 		bool is_open(void);
 
-
 		void set_color(Color color);
 		void size(unsigned int* width, unsigned int* height);
 
 		void process_events(void);
-		
+
 		void on_quit(std::function<void(void)> func);
 		void on_redraw(std::function<void(void)> func);
 		void on_keyboard(std::function<void(const KeyboardEvent& kevt)> func);
@@ -63,10 +78,10 @@ class Window {
 
 		template<class T>
 		void on_quit( void(T::*fp)(void), T* obj);
-		
+
 		template<class T>
 		void on_redraw( void(T::*fp)(void), T* obj);
-		
+
 		template<class T>
 		void on_keyboard( void(T::*fp)(const KeyboardEvent& kevt), T* obj);
 
@@ -91,7 +106,8 @@ class Window {
 		std::string caption_;
 		std::array<float, 4> color_;
 
-		SDL_Surface* window_;
+		SDL_Window* window_;
+		SDL_GLContext context_;
 
 		std::function<void(void)> on_quit_func_;
 		std::function<void(void)> on_redraw_func_;

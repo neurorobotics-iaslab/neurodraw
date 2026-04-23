@@ -2,9 +2,10 @@
 
 namespace neurodraw {
 
-Window::Window(const std::string& caption) : caption_(caption), width_(1024), 
-											   height_(768), bpp_(24), 
-											   x_(0), y_(0) {
+Window::Window(const std::string& caption) : caption_(caption), width_(1024),
+											   height_(768), bpp_(24),
+											   x_(0), y_(0), window_(nullptr),
+											   context_(nullptr) {
 
 	this->color_ = {0.0f, 0.0f, 0.0f, 1.0f};
 	this->is_open_ = false;
@@ -13,7 +14,6 @@ Window::Window(const std::string& caption) : caption_(caption), width_(1024),
 	this->on_redraw_func_   = nullptr;
 	this->on_keyboard_func_ = nullptr;
 	this->on_mouse_func_    = nullptr;
-
 }
 
 Window::~Window(void) {
@@ -25,16 +25,28 @@ bool Window::open(void) {
 	bool retcode;
 
 	this->lock();
-	retcode = this->open_window(this->width_, this->height_, this->caption_);
-	this->is_open_ = true;
+	retcode = (this->open_window(this->width_, this->height_, this->caption_) == 0);
+	this->is_open_ = retcode;
 	this->unlock();
-	
+
 	return retcode;
 }
 
 void Window::close(void) {
 	this->lock();
+
 	this->is_open_ = false;
+
+	if(this->context_ != nullptr) {
+		SDL_GL_DeleteContext(this->context_);
+		this->context_ = nullptr;
+	}
+
+	if(this->window_ != nullptr) {
+		SDL_DestroyWindow(this->window_);
+		this->window_ = nullptr;
+	}
+
 	SDL_Quit();
 	this->unlock();
 }
@@ -47,8 +59,9 @@ void Window::clear(void) {
 
 void Window::update(void) {
 	this->lock();
-	SDL_GL_SwapBuffers();			
-	this->unlock();	
+	if(this->window_ != nullptr)
+		SDL_GL_SwapWindow(this->window_);
+	this->unlock();
 }
 
 bool Window::is_open(void) {
@@ -60,20 +73,20 @@ bool Window::is_open(void) {
 }
 
 void Window::set_color(Color color) {
-	
+
 	this->lock();
-	this->color_.at(0) = color.at(0);
-	this->color_.at(1) = color.at(1);
-	this->color_.at(2) = color.at(2);
-	glClearColor(this->color_.at(1), this->color_.at(1), 
-				 this->color_.at(2), this->color_.at(3));	
+	this->color_.at(0) = color.at(0) / 255.0f;
+	this->color_.at(1) = color.at(1) / 255.0f;
+	this->color_.at(2) = color.at(2) / 255.0f;
+	glClearColor(this->color_.at(0), this->color_.at(1),
+				 this->color_.at(2), this->color_.at(3));
 	this->unlock();
 }
 
 void Window::size(unsigned int* width, unsigned int* height) {
 	this->lock();
 	*width  = this->width_;
-	*height = this->height_; 
+	*height = this->height_;
 	this->unlock();
 }
 
@@ -112,68 +125,49 @@ void Window::on_mouse(std::function<void(const MouseEvent& mevt)> func) {
 }
 
 void Window::process_events(void) {
-	
+
 	SDL_Event sevt;
-	SDL_Event evt_resize;
-	KeyboardEvent evt_keyboard;
-	MouseEvent evt_mouse;
-	bool has_quit_event = false;
-	bool has_videoexpose_event = false;
-	bool has_videoresize_event = false;
-	bool has_keyboard_event = false;
-	bool has_mouse_event = false;
 
 	// Consume all events
 	while (SDL_PollEvent(&sevt)) {
 
-		// Associate last event to callback
 		switch (sevt.type) {
 			case SDL_QUIT:
-				has_quit_event = true;
+				if(this->on_quit_func_ != nullptr)
+					this->on_quit_func_();
 				break;
 
-			case SDL_VIDEOEXPOSE:
-				has_videoexpose_event = true;
-				break;
+			case SDL_WINDOWEVENT:
+				switch(sevt.window.event) {
+					case SDL_WINDOWEVENT_EXPOSED:
+						if(this->on_redraw_func_ != nullptr)
+							this->on_redraw_func_();
+						break;
 
-			case SDL_VIDEORESIZE:
-				has_videoresize_event = true;
-				evt_resize = sevt;
+					case SDL_WINDOWEVENT_RESIZED:
+					case SDL_WINDOWEVENT_SIZE_CHANGED:
+						this->resize_window(sevt.window.data1, sevt.window.data2, 0);
+						this->init_opengl_state();
+						if(this->on_redraw_func_ != nullptr)
+							this->on_redraw_func_();
+						break;
+				}
 				break;
 
 			case SDL_KEYUP:
 			case SDL_KEYDOWN:
-				has_keyboard_event = true;
-				evt_keyboard = KeyboardEvent(sevt);
+				if(this->on_keyboard_func_ != nullptr)
+					this->on_keyboard_func_(KeyboardEvent(sevt));
 				break;
 
 			case SDL_MOUSEBUTTONDOWN:
 			case SDL_MOUSEBUTTONUP:
 			case SDL_MOUSEMOTION:
-				has_mouse_event = true;
-				evt_mouse = MouseEvent(sevt);
+				if(this->on_mouse_func_ != nullptr)
+					this->on_mouse_func_(MouseEvent(sevt));
 				break;
 		}
 	}
-
-	if(has_quit_event == true & this->on_quit_func_ != nullptr)
-		this->on_quit_func_();
-
-	if(has_videoexpose_event == true & this->on_redraw_func_ != nullptr)
-		this->on_redraw_func_();
-	
-	if(has_videoresize_event == true) {
-		this->resize_window(evt_resize.resize.w, evt_resize.resize.h, 0);
-		this->init_opengl_state();
-	}
-	
-	if(has_keyboard_event == true & this->on_keyboard_func_ != nullptr)
-		this->on_keyboard_func_(evt_keyboard);
-
-	if(has_mouse_event == true & this->on_mouse_func_ != nullptr)
-		this->on_mouse_func_(evt_mouse);
-
-
 }
 
 
@@ -191,10 +185,9 @@ int Window::init_opengl_state(void) {
 	glViewport(0, 0, this->width_, this->height_);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	//ratio = (float)wnd->width/(float)wnd->height;
-	ratio = static_cast<float>(this->width_)/static_cast<float>(this->height_);
+	ratio = static_cast<float>(this->width_) / static_cast<float>(this->height_);
 	iw = (ratio > 1.0f) ? ratio : 1.0f;
-	ih = (ratio > 1.0f) ? 1.0f : 1.0f/ratio;
+	ih = (ratio > 1.0f) ? 1.0f : 1.0f / ratio;
 	glOrtho(-iw, iw, -ih, ih, -1, 1);
 
 	glEnableClientState(GL_VERTEX_ARRAY);
@@ -207,14 +200,14 @@ int Window::init_opengl_state(void) {
 	// Enable 2D texturing
 	glEnable(GL_TEXTURE_2D);
 
-	// Set clear color and clear blackground
-	glClearColor(this->color_.at(0),this->color_.at(1),
+	// Set clear color and clear background
+	glClearColor(this->color_.at(0), this->color_.at(1),
 				 this->color_.at(2), this->color_.at(3));
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Setup transparency
-	glEnable (GL_BLEND);
-	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
 
 	// Check for errors
@@ -223,75 +216,76 @@ int Window::init_opengl_state(void) {
 		fprintf(stderr, "OpenGL could not be initialized! (err=0x%04x)\n", err);
 		return 1;
 	}
-	
+
 	return 0;
 }
 
 int Window::open_window(int width, int height, const std::string& caption) {
 
-	int fullscreen = 0;
+	if(SDL_Init(SDL_INIT_VIDEO) != 0) {
+		fprintf(stderr, "SDL could not be initialized: %s\n", SDL_GetError());
+		return 1;
+	}
 
-	// Initialize SDL
-	if(SDL_Init(SDL_INIT_EVERYTHING) == -1) {
-		fprintf(stderr,"SDL could not be initialized\n");
+	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 0);
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+
+	this->window_ = SDL_CreateWindow(caption.c_str(),
+									 SDL_WINDOWPOS_CENTERED,
+									 SDL_WINDOWPOS_CENTERED,
+									 width,
+									 height,
+									 SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+	if(this->window_ == nullptr) {
+		fprintf(stderr, "Window could not be created: %s\n", SDL_GetError());
 		SDL_Quit();
-		return 0;
+		return 1;
 	}
 
-	// Init parameters of the frame buffers
-	SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 8 );
-	SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, 8 );
-	SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, 8 );
-	SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 0 );
-	SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
-
-	// Create resizable window using OpenGL
-	if (!width || !height)
-		fullscreen = 1;
-	this->resize_window(width, height, fullscreen);
-	
-	// Set caption
-	SDL_WM_SetCaption(caption.c_str(), NULL);
-
-	if (this->init_opengl_state()) {
-		return 0;
+	this->context_ = SDL_GL_CreateContext(this->window_);
+	if(this->context_ == nullptr) {
+		fprintf(stderr, "OpenGL context could not be created: %s\n", SDL_GetError());
+		SDL_DestroyWindow(this->window_);
+		this->window_ = nullptr;
+		SDL_Quit();
+		return 1;
 	}
 
-	return 1;
+	SDL_GL_SetSwapInterval(1);
+
+	this->resize_window(width, height, 0);
+
+	if(this->init_opengl_state()) {
+		return 1;
+	}
+
+	return 0;
 }
 
 int Window::resize_window(int width, int height, int fullscreen) {
-	
-	int flags = SDL_OPENGL | SDL_RESIZABLE | SDL_ANYFORMAT;
-	const SDL_VideoInfo* info = NULL;
-	SDL_Surface* surf;
+	(void) fullscreen;
 
-	info = SDL_GetVideoInfo();
-	if(info == NULL) {
-		fprintf(stderr, "SDL_GetVideoInfo was kicked out.\n");
+	if(this->window_ == nullptr)
 		return 1;
+
+	if(width <= 0 || height <= 0) {
+		int drawable_width = 0;
+		int drawable_height = 0;
+		SDL_GL_GetDrawableSize(this->window_, &drawable_width, &drawable_height);
+		width = drawable_width;
+		height = drawable_height;
 	}
 
-	// Set window settings
-	width  = (width > 0) ? width : info->current_w;
-	height = (height > 0) ? height : info->current_h;  
+	this->width_ = static_cast<unsigned int>(width);
+	this->height_ = static_cast<unsigned int>(height);
 
-	if (fullscreen)
-		flags |= SDL_FULLSCREEN;
-
-	// Create resizable window using OpenGL
-	surf = SDL_SetVideoMode(width, height, this->bpp_, flags);
-	if (!surf) {
-		fprintf(stderr, "Window could not be loaded!\n");
-		return 1;
-	}
-
-	this->window_ = surf;
-	this->width_  = surf->w;
-	this->height_ = surf->h;
-	
 	return 0;
-
 }
 
 }

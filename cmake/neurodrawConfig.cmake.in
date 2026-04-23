@@ -1,0 +1,14 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+find_dependency(Threads)
+find_dependency(OpenGL)
+find_dependency(PkgConfig)
+
+include(FindPkgConfig)
+pkg_check_modules(SDL2 REQUIRED IMPORTED_TARGET sdl2)
+pkg_check_modules(SDL2_IMAGE REQUIRED IMPORTED_TARGET SDL2_image)
+pkg_check_modules(SDL2_TTF REQUIRED IMPORTED_TARGET SDL2_ttf)
+
+include("${CMAKE_CURRENT_LIST_DIR}/neurodrawTargets.cmake")
